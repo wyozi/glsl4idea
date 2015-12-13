@@ -56,7 +56,7 @@ public class GLSLParameterList extends GLSLElementImpl implements Iterable<GLSLE
                 final ASTNode node = child.getNode();
                 if (node != null) {
                     final IElementType type = node.getElementType();
-                    if (!GLSLTokenTypes.COMMENTS.contains(type)) {
+                    if (!GLSLTokenTypes.COMMENTS.contains(type) && type != GLSLTokenTypes.COMMA) {
                         Logger.getLogger("GLSLParameterList").warning("Parameter list contains non-comment, non-expression element.");
                     }
                 }
