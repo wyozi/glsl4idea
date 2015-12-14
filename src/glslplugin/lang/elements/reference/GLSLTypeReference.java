@@ -20,6 +20,8 @@
 package glslplugin.lang.elements.reference;
 
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiNamedElement;
+import com.intellij.util.IncorrectOperationException;
 import glslplugin.lang.elements.GLSLElement;
 import glslplugin.lang.elements.declarations.*;
 import glslplugin.lang.elements.statements.GLSLDeclarationStatement;
@@ -97,7 +99,8 @@ public class GLSLTypeReference extends GLSLReferenceBase<GLSLTypename, GLSLTypeD
             }
         }
 
-        return null;
+        // Otherwise look from imports
+        return ((GLSLFile) from.getContainingFile()).findElementFromImportedFiles(typeName, GLSLTypeDefinition.class);
     }
 
     @Nullable

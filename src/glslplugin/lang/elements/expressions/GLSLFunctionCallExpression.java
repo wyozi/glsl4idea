@@ -20,10 +20,7 @@
 package glslplugin.lang.elements.expressions;
 
 import com.intellij.lang.ASTNode;
-import com.intellij.psi.PsiCheckedRenameElement;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiNameIdentifierOwner;
-import com.intellij.util.IncorrectOperationException;
 import glslplugin.lang.elements.GLSLElement;
 import glslplugin.lang.elements.GLSLIdentifier;
 import glslplugin.lang.elements.GLSLReferenceElement;
@@ -33,6 +30,7 @@ import glslplugin.lang.elements.reference.GLSLFunctionReference;
 import glslplugin.lang.elements.reference.GLSLReferenceBase;
 import glslplugin.lang.elements.reference.GLSLTypeReference;
 import glslplugin.lang.elements.types.*;
+import glslplugin.lang.parser.GLSLFile;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -196,31 +194,48 @@ public class GLSLFunctionCallExpression extends GLSLExpression implements GLSLRe
     //endregion
 
     //region Function only
-    @NotNull
-    private List<GLSLFunctionType> findDefinedFunctions(String name, GLSLType[] parameterTypes){
+    private List<GLSLFunctionType> findNamedFunctions(String name) {
         ArrayList<GLSLFunctionType> result = new ArrayList<GLSLFunctionType>();
+
         PsiElement current = findParentByClass(GLSLFunctionDefinition.class);
+
         while (current != null) {
             if (current instanceof GLSLFunctionDeclaration) {
                 GLSLFunctionType functionType = ((GLSLFunctionDeclaration) current).getType();
                 if (name.equals(functionType.getName())) {
-                    switch (functionType.getParameterCompatibilityLevel(parameterTypes)) {
-                        case COMPATIBLE_WITH_IMPLICIT_CONVERSION:
-                            result.add(functionType);
-                            break;
-                        case DIRECTLY_COMPATIBLE:
-                            result.clear();
-                            result.add(functionType);
-                            return result;
-                        case INCOMPATIBLE:
-                            break;
-                        default:
-                            assert false : "Unsupported compatibility level.";
-                    }
+                    result.add(functionType);
                 }
             }
             current = current.getPrevSibling();
         }
+
+        for (GLSLFunctionDefinitionImpl fn : ((GLSLFile) getContainingFile()).findElementsFromImportedFiles(name, GLSLFunctionDefinitionImpl.class)) {
+            result.add(fn.getType());
+        }
+
+        return result;
+    }
+
+    @NotNull
+    private List<GLSLFunctionType> findDefinedFunctions(String name, GLSLType[] parameterTypes) {
+        ArrayList<GLSLFunctionType> result = new ArrayList<GLSLFunctionType>();
+
+        for (GLSLFunctionType functionType : findNamedFunctions(name)) {
+            switch (functionType.getParameterCompatibilityLevel(parameterTypes)) {
+                case COMPATIBLE_WITH_IMPLICIT_CONVERSION:
+                    result.add(functionType);
+                    break;
+                case DIRECTLY_COMPATIBLE:
+                    result.clear();
+                    result.add(functionType);
+                    return result;
+                case INCOMPATIBLE:
+                    break;
+                default:
+                    assert false : "Unsupported compatibility level.";
+            }
+        }
+
         return result;
     }
 
@@ -234,13 +249,19 @@ public class GLSLFunctionCallExpression extends GLSLExpression implements GLSLRe
     }
 
     /**
-     * @return All function types this call can possibly call
+     * @param strictTypes only return functions that have compatible types
+     * @return All function types this function call can possibly refer to
      */
     @NotNull
-    public List<GLSLFunctionType> getPossibleCalledFunctions(){
+    public List<GLSLFunctionType> getPossibleCalledFunctions(boolean strictTypes){
         final GLSLIdentifier identifier = getIdentifier();
         if(identifier == null)return Collections.emptyList();
-        return findDefinedFunctions(identifier.getText(), getParameterTypes());
+        String name = identifier.getText();
+        return strictTypes ? findDefinedFunctions(name, getParameterTypes()) : findNamedFunctions(name);
+    }
+
+    public List<GLSLFunctionType> getPossibleCalledFunctions() {
+        return getPossibleCalledFunctions(true);
     }
 
     /**

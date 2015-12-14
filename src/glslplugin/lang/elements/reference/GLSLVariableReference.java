@@ -21,10 +21,7 @@ package glslplugin.lang.elements.reference;
 
 import com.intellij.psi.PsiElement;
 import glslplugin.lang.elements.GLSLIdentifier;
-import glslplugin.lang.elements.declarations.GLSLDeclaration;
-import glslplugin.lang.elements.declarations.GLSLDeclarationList;
-import glslplugin.lang.elements.declarations.GLSLDeclarator;
-import glslplugin.lang.elements.declarations.GLSLVariableDeclaration;
+import glslplugin.lang.elements.declarations.*;
 import glslplugin.lang.elements.statements.GLSLDeclarationStatement;
 import glslplugin.lang.parser.GLSLFile;
 import org.jetbrains.annotations.Nullable;
@@ -91,7 +88,8 @@ public class GLSLVariableReference extends GLSLReferenceBase<GLSLIdentifier, GLS
             }
         }
 
-        return null;
+        // Otherwise look from imports
+        return ((GLSLFile) source.getContainingFile()).findElementFromImportedFiles(source.getName(), GLSLDeclarator.class);
     }
 
     @Nullable
